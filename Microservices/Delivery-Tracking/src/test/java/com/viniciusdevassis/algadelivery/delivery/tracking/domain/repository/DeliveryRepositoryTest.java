@@ -1,34 +1,38 @@
-package com.viniciusdevassis.algadelivery.delivery.tracking.domain.model;
+package com.viniciusdevassis.algadelivery.delivery.tracking.domain.repository;
 
-import com.viniciusdevassis.algadelivery.delivery.tracking.domain.exception.DomainException;
+import com.viniciusdevassis.algadelivery.delivery.tracking.domain.model.ContactPoint;
+import com.viniciusdevassis.algadelivery.delivery.tracking.domain.model.Delivery;
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.math.BigDecimal;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class DeliveryTest {
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+class DeliveryRepositoryTest {
+
+    @Autowired
+    private DeliveryRepository deliveryRepository;
 
     @Test
-    public void shouldChangeToPlaced() {
+    public void shouldPersist() {
         Delivery delivery = Delivery.draft();
 
         delivery.editPreparationDetails(createValidPreparationDetails());
 
-        delivery.place();
+        delivery.addItem("Computador", 2);
+        delivery.addItem("Notebook", 2);
 
-        assertEquals(DeliveryStatus.WAITING_FOR_COURIER, delivery.getStatus());
-        assertNotNull(delivery.getPlacedAt());
-    }
+        deliveryRepository.saveAndFlush(delivery);
 
-    @Test
-    public void shouldNotPlace() {
-        Delivery delivery = Delivery.draft();
-        assertThrows(DomainException.class, () -> delivery.place());
-
-        assertEquals(DeliveryStatus.DRAFT, delivery.getStatus());
-        assertNull(delivery.getPlacedAt());
+        Delivery persistedDelivery = deliveryRepository.findById(delivery.getId()).orElseThrow();
+        assertEquals(2, persistedDelivery.getItems().size());
     }
 
     private Delivery.PreparationDetails createValidPreparationDetails() {
@@ -58,5 +62,4 @@ class DeliveryTest {
                 .expectedDeliveryTime(Duration.ofHours(5))
                 .build();
     }
-
 }

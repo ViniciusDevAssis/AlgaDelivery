@@ -63,7 +63,7 @@ public class Delivery {
     private List<Item> items = new ArrayList<>();
 
     // Factory method para ficar no lugar do construtor
-    public static Delivery Draft() {
+    public static Delivery draft() {
         Delivery delivery = new Delivery();
         delivery.setId(UUID.randomUUID());
         delivery.setStatus(DeliveryStatus.DRAFT);

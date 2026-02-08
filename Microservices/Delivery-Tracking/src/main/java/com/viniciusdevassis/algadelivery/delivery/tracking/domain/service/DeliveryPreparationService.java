@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Duration;
+import java.math.RoundingMode;
 import java.util.UUID;
 
 @Service
@@ -20,6 +20,8 @@ import java.util.UUID;
 public class DeliveryPreparationService {
 
     private final DeliveryRepository deliveryRepository;
+    private final DeliveryTimeEstimationService deliveryTimeEstimationService;
+    private final CourierPayoutCalculationService courierPayoutCalculationService;
 
     @Transactional
     public Delivery draft(DeliveryInput input) {
@@ -57,16 +59,16 @@ public class DeliveryPreparationService {
                 .phone(recipientInput.getPhone())
                 .build();
 
-        Duration expectedDeliveryTime = Duration.ofHours(3);
-        BigDecimal distanceFee = new BigDecimal("10.00");
-        BigDecimal payout = new BigDecimal("10.00");
+        DeliveryEstimate estimate = deliveryTimeEstimationService.estimate(sender, recipient);
+        BigDecimal calculatedPayout = courierPayoutCalculationService.calculatePayout(estimate.getDistanceInKm());
+        BigDecimal distanceFee = calculateFee(estimate.getDistanceInKm());
 
         Delivery.PreparationDetails preparationDetails = Delivery.PreparationDetails.builder()
                 .recipient(recipient)
                 .sender(sender)
-                .expectedDeliveryTime(expectedDeliveryTime)
+                .expectedDeliveryTime(estimate.getEstimatedTime())
                 .distanceFee(distanceFee)
-                .courierPayout(payout)
+                .courierPayout(calculatedPayout)
                 .build();
 
         delivery.editPreparationDetails(preparationDetails);
@@ -74,5 +76,11 @@ public class DeliveryPreparationService {
         for (ItemInput item : input.getItems()) {
             delivery.addItem(item.getName(), item.getQuantity());
         }
+    }
+
+    private BigDecimal calculateFee(Double distanceInKm) {
+        return new BigDecimal("3")
+                .multiply(new BigDecimal(distanceInKm))
+                .setScale(2, RoundingMode.HALF_EVEN);
     }
 }
